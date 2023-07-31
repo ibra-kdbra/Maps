@@ -1,2 +1,2 @@
 # Maps
-## THE MAPS PROJECT ##
+Just a map
