@@ -1,5 +1,13 @@
 h2 {
-  right: 50%;
+  position: absolute;
+  left: 35%;
+  bottom: 90%;
+}
+
+h1 {
+  position: absolute;
+  left: 32%;
+  bottom: 94%;
 }
 
 /*# sourceMappingURL=main.css.map */
