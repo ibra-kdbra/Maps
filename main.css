@@ -10,4 +10,19 @@ h1 {
   bottom: 94%;
 }
 
+button {
+  color: black;
+  position: absolute;
+  right: 836px;
+  top: 10%;
+  width: 200px;
+  height: 50px;
+  font-size: 40px;
+  background-color: lightskyblue;
+}
+
+body {
+  background-color: lightsteelblue;
+}
+
 /*# sourceMappingURL=main.css.map */
