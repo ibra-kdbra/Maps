@@ -14,7 +14,7 @@ button {
   color: black;
   position: absolute;
   right: 836px;
-  top: 10%;
+  top: 9%;
   width: 200px;
   height: 50px;
   font-size: 40px;
@@ -26,7 +26,13 @@ body {
 }
 
 #hidebtn {
-  top: 20%;
+  top: 15%;
+}
+
+#Mapimg {
+  position: absolute;
+  top: 21%;
+  right: 18%;
 }
 
 /*# sourceMappingURL=main.css.map */
