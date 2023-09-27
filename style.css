@@ -1,0 +1,20 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  text-align: center;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+  transition: opacity 0.5s ease-in-out;
+  opacity: 0.8;
+}
+
+#map:hover {
+  opacity: 1;
+}
