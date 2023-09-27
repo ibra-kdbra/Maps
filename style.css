@@ -2,6 +2,8 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+  background-color: #222;
+  color: #fff;
 }
 
 h1 {
@@ -9,12 +11,47 @@ h1 {
 }
 
 #map {
-  height: 100%;
+  height: 80vh;
   width: 100%;
-  transition: opacity 0.5s ease-in-out;
-  opacity: 0.8;
 }
 
-#map:hover {
-  opacity: 1;
+#search-container {
+  text-align: center;
+  margin: 10px;
+}
+
+#search-input {
+  padding: 5px;
+  margin-right: 5px;
+}
+
+#search-button {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+#dark-mode-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dark-mode {
+  background-color: #333;
+  color: #fff;
+}
+
+.dark-mode #search-button {
+  background-color: #007bff;
+  color: #fff;
 }
