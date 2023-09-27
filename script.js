@@ -1,41 +1,51 @@
-// Element.prototype.hide = function(){
-//     this.style.display = 'none';
-// }
-
-// Element.prototype.show = function() {
-//     this.style.display = '';
-// }
-
-
-
 // Initialize the map
-function initMap() {
-    // Create a map object
-    var map = new google.maps.Map(document.getElementById('map'), {
-      center: {lat: 40.7128, lng: -74.0060}, // New York City coordinates
-      zoom: 12
-    });
-  
-    // Add a marker to the map
-    var marker = new google.maps.Marker({
-      position: {lat: 40.7128, lng: -74.0060},
-      map: map,
-      title: 'New York City'
-    });
-  }
-  
-  // Load the Google Maps API
-  function loadMapScript() {
-    var script = document.createElement('script');
-    script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap';
-    script.defer = true;
-    script.async = true;
-    document.head.appendChild(script);
-  }
-  
-  // Call the loadMapScript function to load the map
-  loadMapScript();
-  
+var map = L.map('map', {
+  zoomControl: false
+}).setView([51.505, -0.09], 13);
 
-  // Note: To use the Google Maps API, you need to sign up for a Google Cloud account and enable the Maps JavaScript API. 
-  // You will also need to obtain an API key and replace 'YOUR_API_KEY' with your actual API key in the JavaScript code.
+// Add the OSM tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+  maxZoom: 18
+}).addTo(map);
+
+// Add a marker to the map
+L.marker([51.5, -0.09]).addTo(map)
+  .bindPopup('A marker on the map.')
+  .openPopup();
+
+// Search for a location
+var searchButton = document.getElementById('search-button');
+searchButton.addEventListener('click', function() {
+  var searchInput = document.getElementById('search-input').value;
+  if (searchInput !== '') {
+    var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(searchInput);
+    fetch(url)
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        if (data.length > 0) {
+          var latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+          map.flyTo(latlng, 13, {
+            duration: 0.5
+          });
+          L.marker(latlng).addTo(map)
+            .bindPopup(data[0].display_name)
+            .openPopup();
+        } else {
+          alert('Location not found');
+        }
+      })
+      .catch(function(error) {
+        console.log('Error:', error);
+      });
+  }
+});
+
+// Dark mode toggle
+var darkModeButton = document.getElementById('dark-mode-button');
+darkModeButton.addEventListener('click', function() {
+  document.body.classList.toggle('dark-mode');
+  darkModeButton.querySelector('i').classList.toggle('fa-sun');
+});
