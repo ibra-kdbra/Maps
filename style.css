@@ -10,14 +10,24 @@ h1 {
   text-align: center;
 }
 
+#map-container {
+  height: calc(100% - 40px);
+  position: relative;
+  z-index: 0;
+}
+
 #map {
-  height: 80vh;
-  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 #search-container {
-  text-align: center;
-  margin: 10px;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  z-index: 1;
 }
 
 #search-input {
@@ -34,24 +44,38 @@ h1 {
   cursor: pointer;
 }
 
-#dark-mode-button {
+#button-container {
   position: absolute;
   top: 10px;
   right: 10px;
+  display: flex;
+  z-index: 1;
+}
+
+#dark-mode-button,
+#geolocation-button {
   padding: 5px;
   background-color: #007bff;
   color: #fff;
   border: none;
   border-radius: 50%;
   cursor: pointer;
+  margin-left: 5px;
 }
+
+#dark-mode-button {
+  margin-right: 5px;
+}
+
 
 .dark-mode {
   background-color: #333;
   color: #fff;
 }
 
-.dark-mode #search-button {
+.dark-mode #search-button,
+.dark-mode #dark-mode-button,
+.dark-mode #geolocation-button {
   background-color: #007bff;
   color: #fff;
 }
