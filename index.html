@@ -8,14 +8,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css">
 </head>
 <body>
-  <h1>Map Website Application</h1>
-  <div id="map"></div>
+  <div id="map-container">
+    <div id="button-container">
+      <button id="dark-mode-button" class="btn"><i class="fas fa-moon"></i></button>
+      <button id="geolocation-button" class="btn"><i class="fas fa-location-arrow"></i></button>
+    </div>
+    <div id="map"></div>
+  </div>
   <div id="search-container">
     <input type="text" id="search-input" placeholder="Search for a location">
     <button id="search-button" class="btn"><i class="fas fa-search"></i></button>
   </div>
-  <button id="dark-mode-button" class="btn"><i class="fas fa-moon"></i></button>
-
+  <!-- <div id="marker-panel">
+    <h2>Marker Panel</h2>
+  </div> -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
   <script src="script.js"></script>
 </body>
