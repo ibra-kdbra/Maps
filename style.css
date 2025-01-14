@@ -6,26 +6,22 @@ html, body {
   color: #fff;
 }
 
-h1 {
-  text-align: center;
-}
-
 #map {
   height: 80vh;
   width: 100%;
 }
 
-#search-container {
+#search-container, #route-container {
   text-align: center;
   margin: 10px;
 }
 
-#search-input {
+#search-input, #from-input, #to-input {
   padding: 5px;
   margin-right: 5px;
 }
 
-#search-button {
+#search-button, #route-button {
   padding: 5px 10px;
   background-color: #007bff;
   color: #fff;
@@ -39,7 +35,7 @@ h1 {
   top: 10px;
   right: 10px;
   padding: 5px;
-  background-color: #007bff;
+  background-color: #070707;
   color: #fff;
   border: none;
   border-radius: 50%;
@@ -51,7 +47,7 @@ h1 {
   color: #fff;
 }
 
-.dark-mode #search-button {
+.dark-mode #search-button, .dark-mode #route-button {
   background-color: #007bff;
   color: #fff;
 }
