@@ -41,3 +41,12 @@ Implement social sharing features that allow users to share specific locations o
 Incorporate analytics tools to track user behavior, such as popular search queries, frequently visited locations or user demographics. This data can help you improve your application and tailor it to your users' needs.
 
 **Evert headline is a bullet point we need to work on.**
+
+
+
+
+Next Steps (Optional)
+
+    Add a refresh button to update weather data dynamically.
+    Fetch real-time wind speed, humidity, and air quality.
+    Allow users to click anywhere on the map to fetch weather data dynamically.
