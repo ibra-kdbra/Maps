@@ -14,6 +14,7 @@ const App = () => {
     end: [45.7640, 4.8357], // Lyon
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [weatherData, setWeatherData] = useState<any>(null);
   const [zoomTo, setZoomTo] = useState<[number, number] | null>(null);
 
@@ -36,6 +37,7 @@ const App = () => {
         setZoomTo([data.location.lat, data.location.lon]); 
         // toast.success(`Weather for ${data.location.name} found!`);
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error("Failed to fetch weather data. Please try again.");
     }
