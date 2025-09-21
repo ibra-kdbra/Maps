@@ -3,19 +3,13 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import { WeatherData } from "../types";
 
 interface MapProps {
   start: [number, number];
   end: [number, number];
-  zoomTo?: [number, number]; // City search zoomTo
-  weatherData?: {
-    city: string;
-    lat: number;
-    lon: number;
-    temperature: number;
-    description: string;
-    icon: string; // Weather condition icon
-  };
+  zoomTo: [number, number] | null;
+  weatherData: WeatherData | null;
 }
 
 const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
