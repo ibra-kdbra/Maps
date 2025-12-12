@@ -5,6 +5,12 @@ export interface WeatherData {
   temperature: number;
   description: string;
   icon: string;
+  windSpeed: number;
+  humidity: number;
+  airQuality?: {
+    index: number;
+    description: string;
+  };
 }
 
 export interface Route {
