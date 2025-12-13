@@ -22,7 +22,9 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
   // Initialize map once
   useEffect(() => {
     if (!mapRef.current) {
-      mapRef.current = L.map("map").setView(start, 13);
+      mapRef.current = L.map("map", {
+        zoomControl: true, // Keep zoom controls
+      }).setView(start, 13);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; OpenStreetMap contributors',
@@ -45,15 +47,18 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
 
   // Handle routing updates separately
   useEffect(() => {
-    if (mapRef.current && routingControlRef.current) {
-      routingControlRef.current.setWaypoints([
-        L.latLng(start[0], start[1]),
-        L.latLng(end[0], end[1]),
-      ]);
-    } else if (mapRef.current && !routingControlRef.current) {
+    if (mapRef.current) {
+      // Remove existing routing control if it exists
+      if (routingControlRef.current) {
+        mapRef.current.removeControl(routingControlRef.current);
+        routingControlRef.current = null;
+      }
+
+      // Create new routing control with updated waypoints
       routingControlRef.current = L.Routing.control({
         waypoints: [L.latLng(start[0], start[1]), L.latLng(end[0], end[1])],
         routeWhileDragging: true,
+        addWaypoints: false, // Disable adding waypoints
       }).addTo(mapRef.current);
     }
   }, [start, end]);

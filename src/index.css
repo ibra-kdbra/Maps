@@ -30,9 +30,11 @@ body {
 }
 
 .leaflet-routing-container {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  display: none !important; /* Hide the routing control panel completely */
+}
+
+.leaflet-control-layers {
+  display: none !important; /* Hide layers control (three dots button) */
 }
 
 .leaflet-routing-alt {

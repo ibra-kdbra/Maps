@@ -16,9 +16,10 @@ import { geocodeLocation } from "../utils/geocode";
 
 interface SidebarProps {
   onRouteCalculate: (start: [number, number], end: [number, number]) => void;
+  onClose: () => void;
 }
 
-const Sidebar = ({ onRouteCalculate }: SidebarProps) => {
+const Sidebar = ({ onRouteCalculate, onClose }: SidebarProps) => {
   const [tabIndex, setTabIndex] = useState(0);
   const [startName, setStartName] = useState("");
   const [endName, setEndName] = useState("");
@@ -72,7 +73,7 @@ const Sidebar = ({ onRouteCalculate }: SidebarProps) => {
         <Typography variant="h6" sx={{ fontWeight: 500, color: "#202124" }}>
           Directions
         </Typography>
-        <IconButton size="small" sx={{ color: "#5f6368" }}>
+        <IconButton size="small" sx={{ color: "#5f6368" }} onClick={onClose}>
           <Close />
         </IconButton>
       </Box>
