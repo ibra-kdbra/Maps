@@ -41,7 +41,7 @@ const App = () => {
       </Box>
 
       {/* Menu Button */}
-      <IconButton
+      {/* <IconButton
         onClick={() => setSidebarOpen(true)}
         sx={{
           position: "absolute",
@@ -54,7 +54,7 @@ const App = () => {
         }}
       >
         <Menu />
-      </IconButton>
+      </IconButton> */}
 
       {/* My Location Button */}
       <IconButton
@@ -114,10 +114,13 @@ const App = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Sidebar onRouteCalculate={(start, end) => {
-              setRoute(start, end);
-              setSidebarOpen(false);
-            }} />
+            <Sidebar
+              onRouteCalculate={(start, end) => {
+                setRoute(start, end);
+                setSidebarOpen(false);
+              }}
+              onClose={() => setSidebarOpen(false)}
+            />
           </Paper>
         </Box>
       )}
