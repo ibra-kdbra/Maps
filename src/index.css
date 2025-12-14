@@ -68,3 +68,9 @@ body {
   background: #4285F4;
   border-radius: 50%;
 }
+
+/* Google Maps-style custom markers */
+.custom-google-maps-marker {
+  background: none !important;
+  border: none !important;
+}
