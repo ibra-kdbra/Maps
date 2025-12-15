@@ -78,6 +78,7 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
         mapRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle layer switching
@@ -220,6 +221,7 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
         }
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weatherData]);
 
   // Handle zoom updates separately

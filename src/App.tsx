@@ -19,6 +19,7 @@ const App = () => {
 
   useEffect(() => {
     fetchCurrentLocation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - only run once on mount
 
   const handleMyLocation = () => {
