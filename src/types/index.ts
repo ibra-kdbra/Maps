@@ -18,10 +18,19 @@ export interface Route {
   end: [number, number];
 }
 
+export interface MapLayer {
+  id: string;
+  name: string;
+  attribution: string;
+  url: string;
+}
+
 export interface MapState {
   route: Route;
   weatherData: WeatherData | null;
   zoomTo: [number, number] | null;
+  currentLayer: string;
+  availableLayers: MapLayer[];
 }
 
 export interface MapActions {
@@ -29,4 +38,5 @@ export interface MapActions {
   setWeatherData: (data: WeatherData | null) => void;
   setZoomTo: (coords: [number, number] | null) => void;
   setInitialStart: (coords: [number, number]) => void;
+  setCurrentLayer: (layerId: string) => void;
 }
