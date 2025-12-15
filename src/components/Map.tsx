@@ -5,6 +5,7 @@ import "leaflet-routing-machine";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import { WeatherData } from "../types";
 import { useWeather } from "../hooks/useWeather";
+import { useMapStore } from "../store/mapStore";
 
 // Google Maps-style marker icons
 const createGoogleMapsIcon = (color: string) => {
@@ -53,7 +54,9 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const routingControlRef = useRef<L.Routing.Control | null>(null);
   const weatherMarkerRef = useRef<L.Marker | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const { fetchWeatherByCoords } = useWeather();
+  const { currentLayer, availableLayers } = useMapStore();
 
   // Initialize map once
   useEffect(() => {
@@ -61,10 +64,6 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
       mapRef.current = L.map("map", {
         zoomControl: true, // Keep zoom controls
       }).setView(start, 13);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(mapRef.current);
 
       // Add click handler to fetch weather at clicked location
       mapRef.current.on('click', async (e: L.LeafletMouseEvent) => {
@@ -80,6 +79,25 @@ const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
       }
     };
   }, []);
+
+  // Handle layer switching
+  useEffect(() => {
+    if (mapRef.current) {
+      // Remove existing tile layer
+      if (tileLayerRef.current) {
+        mapRef.current.removeLayer(tileLayerRef.current);
+      }
+
+      // Find the selected layer
+      const selectedLayer = availableLayers.find(layer => layer.id === currentLayer);
+      if (selectedLayer) {
+        // Create and add new tile layer
+        tileLayerRef.current = L.tileLayer(selectedLayer.url, {
+          attribution: selectedLayer.attribution,
+        }).addTo(mapRef.current);
+      }
+    }
+  }, [currentLayer, availableLayers]);
 
   // Handle routing updates separately
   useEffect(() => {
