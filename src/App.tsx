@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"; // Import styles
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Map from "./components/Map";
@@ -12,6 +14,7 @@ const App = () => {
     end: [45.7640, 4.8357], // Lyon
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [weatherData, setWeatherData] = useState<any>(null);
   const [zoomTo, setZoomTo] = useState<[number, number] | null>(null);
 
@@ -20,17 +23,23 @@ const App = () => {
   };
 
   const handleWeatherSearch = async (city: string) => {
-    const data = await fetchWeather(city);
-    if (data) {
-      setWeatherData({
-        city: data.location.name,
-        lat: data.location.lat,
-        lon: data.location.lon,
-        temperature: data.current.temp_c,
-        description: data.current.condition.text,
-        icon: data.current.condition.icon, // Weather icon
-      });
-      setZoomTo([data.location.lat, data.location.lon]); // Zoom to city
+    try {
+      const data = await fetchWeather(city);
+      if (data) {
+        setWeatherData({
+          city: data.location.name,
+          lat: data.location.lat,
+          lon: data.location.lon,
+          temperature: data.current.temp_c,
+          description: data.current.condition.text,
+          icon: data.current.condition.icon,
+        });
+        setZoomTo([data.location.lat, data.location.lon]); 
+        // toast.success(`Weather for ${data.location.name} found!`);
+      }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      toast.error("Failed to fetch weather data. Please try again.");
     }
   };
 
@@ -38,7 +47,6 @@ const App = () => {
     const fetchUserLocation = async () => {
       try {
         const userLocation = await getUserLocation();
-        alert(`Your location is set to: ${userLocation.join(", ")}. Click "OK" to confirm.`);
         setRoute((prev) => ({ ...prev, start: userLocation }));
       } catch (error) {
         console.error("Failed to fetch user location:", error);
@@ -50,6 +58,7 @@ const App = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <ToastContainer position="top-right" autoClose={3000} />
       <Navbar onSearch={handleWeatherSearch} />
       <Box sx={{ display: "flex", flexGrow: 1 }}>
         <Sidebar onRouteCalculate={handleRouteCalculate} />
