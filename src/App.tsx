@@ -3,9 +3,10 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // Import styles
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
+import LayerSwitcher from "./components/LayerSwitcher";
 import Map from "./components/Map";
 import { Box, IconButton, Paper } from "@mui/material";
-import { Menu, Directions, MyLocation } from "@mui/icons-material";
+import { Directions, MyLocation } from "@mui/icons-material";
 import { useMapStore } from "./store/mapStore";
 import { useWeather } from "./hooks/useWeather";
 import { useLocation } from "./hooks/useLocation";
@@ -39,22 +40,6 @@ const App = () => {
       }}>
         <Navbar onSearch={searchWeather} />
       </Box>
-
-      {/* Menu Button */}
-      {/* <IconButton
-        onClick={() => setSidebarOpen(true)}
-        sx={{
-          position: "absolute",
-          top: 16,
-          left: 16,
-          zIndex: 1000,
-          bgcolor: "white",
-          boxShadow: 2,
-          "&:hover": { bgcolor: "#f5f5f5" }
-        }}
-      >
-        <Menu />
-      </IconButton> */}
 
       {/* My Location Button */}
       <IconButton
@@ -124,6 +109,9 @@ const App = () => {
           </Paper>
         </Box>
       )}
+
+      {/* Layer Switcher */}
+      <LayerSwitcher onClose={() => {}} />
 
       {/* Full Screen Map */}
       <Box sx={{ flexGrow: 1, position: "relative" }}>
