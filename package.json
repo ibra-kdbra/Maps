@@ -16,7 +16,7 @@
     "@mui/material": "^7.3.6",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "^1.141.2",
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "leaflet": "^1.9.4",
     "leaflet-providers": "^3.0.0",
     "leaflet-routing-machine": "^3.2.12",
