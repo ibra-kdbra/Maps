@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Map Tile Server (PMTiles)
+  tileserver:
+    image: nginx:alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    command: [nginx-debug, '-g', 'daemon off;']
+
+  # OSRM Directions Engine
+  osrm:
+    image: osrm/osrm-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data:ro
+    restart: unless-stopped
+    command: "osrm-routed --algorithm mld /data/syria-merged.osrm"
+    # Note: ensure setup-engine.sh is run before booting this container
