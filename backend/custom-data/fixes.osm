@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version="0.6" generator="JOSM">
+  <!-- This is where your ops team will drop overriding road data (JOSM export) -->
+  <!-- Example of a fake override highway: -->
+  <!--
+  <node id="-1" lat="33.5138" lon="36.2765" visible="true" />
+  <node id="-2" lat="33.5150" lon="36.2770" visible="true" />
+  <way id="-10" visible="true">
+    <nd ref="-1" />
+    <nd ref="-2" />
+    <tag k="highway" v="primary" />
+    <tag k="name" v="Secret Syrian Delivery Road" />
+  </way>
+  -->
+</osm>
