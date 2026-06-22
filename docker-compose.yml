@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  ingestion-api:
+    build:
+      context: ./backend/ingestion-api
+      dockerfile: Dockerfile
+    container_name: ingestion_orchestrator
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./backend/data:/data
+      - ./backend/scripts:/scripts
+      # Mount Docker socket to allow Go container to restart OSRM container
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  osrm-routed:
+    image: osrm/osrm-backend:latest
+    container_name: osrm_routing_core
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/data:/data
+    # Use a dummy command for now since we don't have a compiled graph yet
+    command: "tail -f /dev/null"
