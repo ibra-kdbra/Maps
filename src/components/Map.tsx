@@ -1,237 +1,533 @@
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import "leaflet-routing-machine";
-import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
-import { WeatherData } from "../types";
-import { useWeather } from "../hooks/useWeather";
+import { useEffect, useRef, useCallback, useState } from "react";
+import Map, { Marker, NavigationControl, Source, Layer, MapRef } from "react-map-gl";
+import maplibregl from "maplibre-gl";
+import { Protocol } from "pmtiles";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+// Fix Middle Eastern Arabic layout fragmentation completely natively
+maplibregl.setRTLTextPlugin(
+  'https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.2.3/mapbox-gl-rtl-text.min.js',
+  null as any
+);
+
+// Register PMTiles protocol globally
+const protocol = new Protocol();
+maplibregl.addProtocol("pmtiles", protocol.tile);
+
 import { useMapStore } from "../store/mapStore";
-
-// Google Maps-style marker icons
-const createGoogleMapsIcon = (color: string) => {
-  return L.divIcon({
-    html: `
-      <div style="
-        position: relative;
-        width: 32px;
-        height: 32px;
-      ">
-        <!-- Shadow -->
-        <div style="
-          position: absolute;
-          top: 24px;
-          left: 8px;
-          width: 16px;
-          height: 8px;
-          background: rgba(0,0,0,0.2);
-          border-radius: 50%;
-          filter: blur(1px);
-        "></div>
-        <!-- Pin -->
-        <svg width="32" height="32" viewBox="0 0 32 32" style="position: absolute; top: 0; left: 0;">
-          <path d="M16 2C11.6 2 8 5.6 8 10c0 7.4 6.6 14.8 7.4 15.7.4.4 1.2.4 1.6 0C17.4 24.8 24 17.4 24 10c0-4.4-3.6-8-8-8z" fill="${color}" stroke="white" stroke-width="2"/>
-          <circle cx="16" cy="10" r="4" fill="white"/>
-        </svg>
-      </div>
-    `,
-    className: 'custom-google-maps-marker',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32]
-  });
-};
-
-const weatherIcon = createGoogleMapsIcon('#4285F4'); // Google Blue
+import { useRouting } from "../hooks/useRouting";
+import DrawControl from "./DrawControl";
+import { generateOsmXmlFromGeojson, downloadOsmResource, uploadOverrides, getIngestStatus } from "../utils/osmExporter";
+import type MapboxDraw from "@mapbox/mapbox-gl-draw";
+import { toast } from "react-toastify";
+import { reverseGeocode, autocompleteLocation, AutocompleteSuggestion } from "../utils/geocode";
 
 interface MapProps {
-  start: [number, number];
-  end: [number, number];
   zoomTo: [number, number] | null;
-  weatherData: WeatherData | null;
 }
 
-const Map = ({ start, end, zoomTo, weatherData }: MapProps) => {
-  const mapRef = useRef<L.Map | null>(null);
-  const routingControlRef = useRef<L.Routing.Control | null>(null);
-  const weatherMarkerRef = useRef<L.Marker | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const { fetchWeatherByCoords } = useWeather();
-  const { currentLayer, availableLayers } = useMapStore();
+const formatDistance = (meters: number) => {
+  if (meters < 1000) return `${Math.round(meters)} meters`;
+  return `${(meters / 1000).toFixed(2)} km`;
+};
 
-  // Initialize map once
-  useEffect(() => {
-    if (!mapRef.current) {
-      mapRef.current = L.map("map", {
-        zoomControl: true, // Keep zoom controls
-      }).setView(start, 13);
+const formatDuration = (seconds: number) => {
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  return `${hrs} hr ${remainingMins} min`;
+};
 
-      // Add click handler to fetch weather at clicked location
-      mapRef.current.on('click', async (e: L.LeafletMouseEvent) => {
-        const { lat, lng } = e.latlng;
-        await fetchWeatherByCoords(lat, lng);
+const MapComponent = ({ zoomTo }: MapProps) => {
+  const mapRef = useRef<MapRef>(null);
+  const drawRef = useRef<MapboxDraw | null>(null);
+  
+  const { currentLayer, availableLayers, setCurrentLayer } = useMapStore();
+  const waypoints = useMapStore(state => state.route.waypoints);
+  const addWaypoint = useMapStore(state => state.addWaypoint);
+  const clearWaypoints = useMapStore(state => state.clearWaypoints);
+  
+  // Custom offline routing hook
+  const { routeGeoJSON, distance, duration } = useRouting(waypoints);
+
+  // Drawing state
+  const [features, setFeatures] = useState<any>({});
+  const [activeTab, setActiveTab] = useState<'navigation' | 'admin'>('navigation');
+  const [drawMode, setDrawMode] = useState<'draw' | 'select'>('draw');
+
+  // OSRM compilation job tracking states
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [jobLogs, setJobLogs] = useState<string>("");
+  const [showStatusPanel, setShowStatusPanel] = useState<boolean>(false);
+
+  // Offline Geocoding Autocomplete States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    if (val.trim().length > 1) {
+      const results = await autocompleteLocation(val);
+      setSuggestions(results);
+      setShowSuggestions(true);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (sugg: AutocompleteSuggestion) => {
+    setSearchQuery(sugg.label);
+    setShowSuggestions(false);
+
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: [sugg.coordinates[1], sugg.coordinates[0]],
+        zoom: 14,
+        essential: true
       });
     }
 
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    addWaypoint([sugg.coordinates[0], sugg.coordinates[1]]);
+    toast.success(`Zoomed to: ${sugg.label}`);
+  };
 
-  // Handle layer switching
   useEffect(() => {
-    if (mapRef.current) {
-      // Remove existing tile layer
-      if (tileLayerRef.current) {
-        mapRef.current.removeLayer(tileLayerRef.current);
-      }
+    if (!activeJobId) return;
 
-      // Find the selected layer
-      const selectedLayer = availableLayers.find(layer => layer.id === currentLayer);
-      if (selectedLayer) {
-        // Create and add new tile layer
-        tileLayerRef.current = L.tileLayer(selectedLayer.url, {
-          attribution: selectedLayer.attribution,
-        }).addTo(mapRef.current);
-      }
-    }
-  }, [currentLayer, availableLayers]);
-
-  // Handle routing updates separately
-  useEffect(() => {
-    if (mapRef.current) {
-      // Remove existing routing control if it exists
-      if (routingControlRef.current) {
-        mapRef.current.removeControl(routingControlRef.current);
-        routingControlRef.current = null;
-      }
-
-      // Create new routing control with updated waypoints
-      routingControlRef.current = L.Routing.control({
-        waypoints: [L.latLng(start[0], start[1]), L.latLng(end[0], end[1])],
-        routeWhileDragging: true,
-        addWaypoints: false, // Disable adding waypoints
-      }).addTo(mapRef.current);
-    }
-  }, [start, end]);
-
-  // Handle weather marker updates separately
-  useEffect(() => {
-    if (weatherData && mapRef.current) {
-      // Remove previous marker
-      if (weatherMarkerRef.current) {
-        weatherMarkerRef.current.remove();
-      }
-
-      // Create Google Maps-style weather card popup
-      const popupContent = `
-        <div style="font-family: 'Roboto', sans-serif; min-width: 280px; max-width: 320px;">
-          <!-- Header -->
-          <div style="display: flex; align-items: center; margin-bottom: 12px;">
-            <div style="flex: 1;">
-              <h3 style="margin: 0; font-size: 18px; font-weight: 500; color: #202124;">${weatherData.city}</h3>
-              <p style="margin: 2px 0 0 0; font-size: 14px; color: #5f6368;">${weatherData.description}</p>
-            </div>
-            <img src="https:${weatherData.icon}" alt="${weatherData.description}" style="width: 48px; height: 48px; margin-left: 8px;"/>
-          </div>
-
-          <!-- Temperature -->
-          <div style="display: flex; align-items: baseline; margin-bottom: 16px;">
-            <span style="font-size: 32px; font-weight: 300; color: #202124;">${weatherData.temperature.toFixed(0)}°</span>
-            <span style="font-size: 16px; color: #5f6368; margin-left: 4px;">C</span>
-          </div>
-
-          <!-- Weather Details -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-            <div style="display: flex; align-items: center;">
-              <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 8px; color: #5f6368;">
-                <path fill="currentColor" d="M12 2L13.09 8.26L19 9L13.09 9.74L12 16L10.91 9.74L5 9L10.91 8.26L12 2Z"/>
-              </svg>
-              <div>
-                <div style="font-size: 12px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px;">Wind</div>
-                <div style="font-size: 14px; font-weight: 500; color: #202124;">${weatherData.windSpeed.toFixed(1)} km/h</div>
-              </div>
-            </div>
-            <div style="display: flex; align-items: center;">
-              <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 8px; color: #5f6368;">
-                <path fill="currentColor" d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L19 6.6C18.8 6 18.5 5.4 18.1 4.9L19 3L17 1L15.4 1.9C14.9 1.5 14.3 1.2 13.7 1L13.3 0H11.3L10.9 1C10.3 1.2 9.7 1.5 9.2 1.9L7.6 1L5.6 3L6.5 4.9C6.1 5.4 5.8 6 5.6 6.6L4 7V9L5.6 9.4C5.8 10 6.1 10.6 6.5 11.1L5.6 13L7.6 15L9.2 14.1C9.7 14.5 10.3 14.8 10.9 15L11.3 16H13.3L13.7 15C14.3 14.8 14.9 14.5 15.4 14.1L17 15L19 13L18.1 11.1C18.5 10.6 18.8 10 19 9.4L21 9ZM12 8C13.66 8 15 9.34 15 11C15 12.66 13.66 14 12 14C10.34 14 9 12.66 9 11C9 9.34 10.34 8 12 8Z"/>
-              </svg>
-              <div>
-                <div style="font-size: 12px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px;">Humidity</div>
-                <div style="font-size: 14px; font-weight: 500; color: #202124;">${weatherData.humidity}%</div>
-              </div>
-            </div>
-          </div>
-
-          ${weatherData.airQuality ? `
-          <!-- Air Quality -->
-          <div style="display: flex; align-items: center; padding: 8px 12px; background-color: #f8f9fa; border-radius: 8px; margin-bottom: 16px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 8px; color: #5f6368;">
-              <path fill="currentColor" d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L19 6.6C18.8 6 18.5 5.4 18.1 4.9L19 3L17 1L15.4 1.9C14.9 1.5 14.3 1.2 13.7 1L13.3 0H11.3L10.9 1C10.3 1.2 9.7 1.5 9.2 1.9L7.6 1L5.6 3L6.5 4.9C6.1 5.4 5.8 6 5.6 6.6L4 7V9L5.6 9.4C5.8 10 6.1 10.6 6.5 11.1L5.6 13L7.6 15L9.2 14.1C9.7 14.5 10.3 14.8 10.9 15L11.3 16H13.3L13.7 15C14.3 14.8 14.9 14.5 15.4 14.1L17 15L19 13L18.1 11.1C18.5 10.6 18.8 10 19 9.4L21 9ZM12 8C13.66 8 15 9.34 15 11C15 12.66 13.66 14 12 14C10.34 14 9 12.66 9 11C9 9.34 10.34 8 12 8Z"/>
-            </svg>
-            <div style="flex: 1;">
-              <div style="font-size: 12px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px;">Air Quality</div>
-              <div style="font-size: 14px; font-weight: 500; color: #202124;">${weatherData.airQuality.description}</div>
-            </div>
-            <div style="font-size: 16px; font-weight: 500; color: #4285F4;">${weatherData.airQuality.index}</div>
-          </div>
-          ` : ''}
-
-          <!-- Refresh Button -->
-          <button id="refresh-weather" style="
-            width: 100%;
-            padding: 10px 16px;
-            background-color: #4285F4;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            font-family: 'Roboto', sans-serif;
-            cursor: pointer;
-            transition: background-color 0.2s;
-          ">
-            Refresh
-          </button>
-        </div>
-      `;
-
-      // Add new weather marker with popup
-      weatherMarkerRef.current = L.marker([weatherData.lat, weatherData.lon], {
-        icon: weatherIcon
-      })
-        .addTo(mapRef.current)
-        .bindPopup(popupContent)
-        .openPopup();
-
-      // Add refresh button handler
-      weatherMarkerRef.current.on('popupopen', () => {
-        const refreshBtn = document.getElementById('refresh-weather');
-        if (refreshBtn) {
-          // Remove previous event listeners
-          const newBtn = refreshBtn.cloneNode(true);
-          refreshBtn.parentNode?.replaceChild(newBtn, refreshBtn);
-
-          newBtn.addEventListener('click', async () => {
-            await fetchWeatherByCoords(weatherData.lat, weatherData.lon);
-          });
+    let intervalId = setInterval(async () => {
+      try {
+        const status = await getIngestStatus(activeJobId);
+        setJobStatus(status.status);
+        setJobLogs(status.logs);
+        
+        if (status.status === 'completed' || status.status === 'failed') {
+          clearInterval(intervalId);
+          // Wait 5 seconds and auto-dismiss on success
+          if (status.status === 'completed') {
+            setTimeout(() => {
+              setShowStatusPanel(false);
+              setActiveJobId(null);
+              setJobStatus(null);
+              setJobLogs("");
+            }, 5000);
+          }
         }
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weatherData]);
+      } catch (err: any) {
+        console.error("Error polling job status:", err);
+      }
+    }, 1500);
 
-  // Handle zoom updates separately
+    return () => clearInterval(intervalId);
+  }, [activeJobId]);
+
+  const handleMapClick = async (event: any) => {
+    if (activeTab === 'admin') return; 
+    const { lng, lat } = event.lngLat;
+    if (lng && lat) {
+      addWaypoint([lat, lng]);
+      
+      try {
+        const address = await reverseGeocode(lat, lng);
+        toast.info(`Waypoint added near: ${address}`, {
+          position: "bottom-center",
+          autoClose: 3500,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored"
+        });
+      } catch (err) {
+        console.error("Failed to reverse geocode waypoint:", err);
+      }
+    }
+  };
+
   useEffect(() => {
     if (zoomTo && mapRef.current) {
-      mapRef.current.setView(zoomTo, 12);
+      mapRef.current.flyTo({ center: [zoomTo[1], zoomTo[0]], zoom: 12 });
     }
   }, [zoomTo]);
 
-  return <div id="map" style={{ height: "100vh", width: "100%" }} />;
+  useEffect(() => {
+    if (activeTab === 'navigation') {
+      try { drawRef.current?.changeMode('static'); } catch (e) {}
+    } else {
+      try { drawRef.current?.changeMode('simple_select'); } catch (e) {}
+      setDrawMode('select');
+    }
+  }, [activeTab]);
+
+  const onUpdateFeatures = useCallback((e: any) => {
+    setFeatures((currFeatures: any) => {
+      const newFeatures = { ...currFeatures };
+      for (const f of e.features) {
+        newFeatures[f.id] = f;
+      }
+      return newFeatures;
+    });
+  }, []);
+
+  const onDeleteFeatures = useCallback((e: any) => {
+    setFeatures((currFeatures: any) => {
+      const newFeatures = { ...currFeatures };
+      for (const f of e.features) {
+        delete newFeatures[f.id];
+      }
+      return newFeatures;
+    });
+  }, []);
+
+  const handleSaveOverrides = async () => {
+    const geoJSON = {
+      type: "FeatureCollection",
+      features: Object.values(features)
+    };
+    if (geoJSON.features.length === 0) {
+      alert("No geometry traced. Please draw lines representing roads.");
+      return;
+    }
+    const xml = generateOsmXmlFromGeojson(geoJSON);
+    downloadOsmResource(xml);
+    
+    try {
+      setShowStatusPanel(true);
+      setJobStatus("pending");
+      setJobLogs("Uploading road overrides to server...");
+      const jobId = await uploadOverrides(xml);
+      setActiveJobId(jobId);
+    } catch (err: any) {
+      setJobStatus("failed");
+      setJobLogs(`Upload failed: ${err.message}`);
+    }
+  };
+
+  const handleTriggerDraw = () => {
+    drawRef.current?.changeMode('draw_line_string');
+    setDrawMode('draw');
+  };
+
+  const handleTriggerSelect = () => {
+    drawRef.current?.changeMode('simple_select');
+    setDrawMode('select');
+  };
+
+  const handleTriggerTrash = () => {
+    drawRef.current?.trash();
+  };
+
+  // Find the selected layer
+  const mapStyleUrl = availableLayers.find(layer => layer.id === currentLayer)?.url || availableLayers[0].url;
+
+  return (
+    <div className="relative h-screen w-full bg-slate-100 font-sans text-slate-900">
+      
+      {/* 
+        Utilitarian Minimalist Side Console (Uber / Apple Maps inspired)
+      */}
+      <div className="absolute top-4 left-4 z-10 w-96 bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200">
+        
+        <div className="bg-slate-900 text-white p-4">
+          <h2 className="font-semibold text-lg tracking-tight">National Logistics Map</h2>
+          <p className="text-xs text-slate-400 mt-1">Enterprise Routing Engine & Fleet Control</p>
+        </div>
+
+        {/* Tab Toggle */}
+        <div className="flex border-b border-slate-200 bg-slate-50">
+          <button 
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'navigation' ? 'bg-white text-slate-900 border-b-2 border-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('navigation')}
+          >
+            Route Tester
+          </button>
+          <button 
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'admin' ? 'bg-white text-slate-900 border-b-2 border-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('admin')}
+          >
+            Map Admin Editor
+          </button>
+        </div>
+
+        <div className="p-5 max-h-[80vh] overflow-y-auto">
+          {activeTab === 'navigation' && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-2">Fleet Route Simulation</h3>
+                
+                <div className="bg-indigo-50 border border-indigo-100 p-3 rounded mb-4 text-xs text-indigo-800 leading-relaxed">
+                  <b>Usage:</b> Click anywhere on the map to define Point A. Click again to define Point B. The underlying OSRM algorithm will instantly trace the driving path calculating distance and localized ETA.
+                </div>
+
+                {/* Offline Autocomplete Geocoding Search */}
+                <div className="relative mb-4">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Location Search (Offline)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                      onBlur={() => { setTimeout(() => setShowSuggestions(false), 200); }}
+                      placeholder="Type place name (e.g. Damascus)..."
+                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white text-xs border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-lg py-2.5 pl-3 pr-8 outline-none transition-all"
+                    />
+                    {searchQuery && (
+                      <button 
+                        onClick={() => { setSearchQuery(""); setSuggestions([]); setShowSuggestions(false); }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-medium"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-[1010] max-h-52 overflow-y-auto divide-y divide-slate-100">
+                      {suggestions.map((sugg, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSelectSuggestion(sugg)}
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-slate-700 transition-colors flex flex-col"
+                        >
+                          <span className="font-semibold text-slate-900 truncate">{sugg.label}</span>
+                          <span className="text-[10px] text-slate-400 mt-0.5">{sugg.coordinates[0].toFixed(5)}, {sugg.coordinates[1].toFixed(5)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="text-xs font-semibold bg-slate-100 border border-slate-200 px-2 py-1 rounded text-slate-600">
+                    Dropped Waypoints: {waypoints.length}
+                  </div>
+                  {waypoints.length > 0 && (
+                    <button 
+                      onClick={clearWaypoints}
+                      className="text-xs font-medium text-red-600 hover:text-red-800 bg-red-50 border border-red-100 px-2 py-1 rounded transition-colors"
+                    >
+                      Reset Route
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {distance !== null && duration !== null && (
+                <div className="pt-4 pb-2 border-y border-slate-100">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Mathematical Output</h3>
+                  <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-lg shadow-inner">
+                    <div>
+                      <div className="text-xl font-bold tracking-tighter">{formatDuration(duration)}</div>
+                      <div className="text-[10px] text-slate-400 font-medium tracking-widest mt-1">EST. TIME (ETA)</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold tracking-tight text-emerald-400">{formatDistance(distance)}</div>
+                      <div className="text-[10px] text-slate-400 font-medium tracking-widest mt-1">DRIVING DISTANCE</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">Basemap Graphic Engine</h3>
+                <div className="flex bg-slate-100 p-1 rounded-md">
+                  {availableLayers.slice(0, 2).map(layer => (
+                    <button 
+                      key={layer.id}
+                      onClick={() => setCurrentLayer(layer.id)}
+                      className={`flex-1 text-xs py-1.5 px-2 rounded font-medium transition-all ${currentLayer === layer.id ? 'bg-white shadow-sm text-black border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      {layer.id.includes('local') ? 'Local System (Offline)' : 'Public Cloud (Online)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {activeTab === 'admin' && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-2">Graph Logic Override</h3>
+                
+                <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-800 p-3 rounded-r text-xs leading-relaxed mb-4">
+                  <b>Purpose:</b> Uncharted alleys or blocked military checkpoints cause delivery dispatch failure. 
+                  Use these tools to manually draw missing streets. The backend routing algorithms will assimilate these exported lines, allowing fleets to bridge previously inaccessible areas.
+                </div>
+              </div>
+              
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+                  Interactive Geometry Tools
+                </div>
+                <div className="p-3 space-y-2 bg-white">
+                  
+                  <button 
+                    onClick={handleTriggerDraw}
+                    className={`w-full text-left px-3 py-2 text-sm rounded border flex items-center transition-colors ${drawMode === 'draw' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                  >
+                    <span className="mr-2">✏️</span> Trace Missing Road
+                  </button>
+
+                  <button 
+                    onClick={handleTriggerSelect}
+                    className={`w-full text-left px-3 py-2 text-sm rounded border flex items-center transition-colors ${drawMode === 'select' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                  >
+                    <span className="mr-2">👆</span> Select Geometry
+                  </button>
+
+                  <button 
+                    onClick={handleTriggerTrash}
+                    className="w-full text-left px-3 py-2 text-sm rounded border bg-white border-rose-200 hover:bg-rose-50 text-rose-600 flex items-center transition-colors mt-2"
+                  >
+                    <span className="mr-2">🗑️</span> Delete Selected Graph
+                  </button>
+
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  onClick={handleSaveOverrides}
+                  className="w-full bg-slate-900 text-white font-medium text-sm py-3 rounded hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center space-x-2"
+                >
+                  <span>Export as <b>fixes.osm</b></span>
+                </button>
+                <div className="text-center mt-2 text-[10px] text-slate-400 font-medium">
+                  Triggers native re-compilation on `/backend/custom-data/`
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Map
+        ref={mapRef}
+        mapLib={maplibregl as any}
+        initialViewState={{
+          longitude: 38.238,
+          latitude: 34.802,
+          zoom: 6
+        }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle={mapStyleUrl}
+        onClick={handleMapClick}
+      >
+        <NavigationControl position="bottom-right" />
+
+        <DrawControl
+          drawRef={drawRef}
+          onCreate={onUpdateFeatures}
+          onUpdate={onUpdateFeatures}
+          onDelete={onDeleteFeatures}
+        />
+
+        {/* Render all dropped waypoints elegantly */}
+        {activeTab === 'navigation' && waypoints.map((wp, index) => (
+          <Marker key={index} longitude={wp[1]} latitude={wp[0]}>
+            <div className="flex items-center justify-center w-7 h-7 bg-slate-900 text-white rounded-full text-xs font-bold shadow-lg border-[3px] border-white ring-2 ring-black/10">
+              {index + 1}
+            </div>
+          </Marker>
+        ))}
+
+        {/* Render Offline OSRM Routing Layer */}
+        {activeTab === 'navigation' && routeGeoJSON && (
+          <Source id="route-source" type="geojson" data={routeGeoJSON}>
+            {/* White outline for high contrast minimalist aesthetic */}
+            <Layer 
+              id="route-layer-outline" 
+              type="line" 
+              layout={{ "line-join": "round", "line-cap": "round" }}
+              paint={{ "line-color": "#ffffff", "line-width": 8 }}
+            />
+            {/* Pure Stark Indigo stroke */}
+            <Layer 
+              id="route-layer-core" 
+              type="line" 
+              layout={{ "line-join": "round", "line-cap": "round" }}
+              paint={{ "line-color": "#4338ca", "line-width": 4 }}
+            />
+          </Source>
+        )}
+
+      </Map>
+
+      {showStatusPanel && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-md px-4 pointer-events-auto">
+          <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-2xl p-5 text-slate-800 transition-all duration-300">
+            <div className="flex items-start justify-between space-x-3">
+              <div className="flex items-center space-x-3">
+                <div className={`p-2.5 rounded-xl text-xl flex items-center justify-center ${
+                  jobStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                  jobStatus === 'failed' ? 'bg-rose-50 text-rose-600' :
+                  'bg-indigo-50 text-indigo-600 animate-pulse'
+                }`}>
+                  {jobStatus === 'completed' && '✅'}
+                  {jobStatus === 'failed' && '❌'}
+                  {jobStatus === 'pending' && '⏳'}
+                  {jobStatus === 'compiling' && '⚙️'}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-slate-900">
+                    {jobStatus === 'completed' && 'OSRM Recompilation Complete'}
+                    {jobStatus === 'failed' && 'OSRM Compilation Failed'}
+                    {jobStatus === 'pending' && 'Override Uploaded'}
+                    {jobStatus === 'compiling' && 'Recompiling Map Graph'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {jobStatus === 'completed' && 'Map data updated and OSRM container restarted.'}
+                    {jobStatus === 'failed' && 'An error occurred during map graph rebuild.'}
+                    {jobStatus === 'pending' && 'Preparing pipeline and compiling...'}
+                    {jobStatus === 'compiling' && 'Merging lines with baseline map...'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowStatusPanel(false);
+                  setActiveJobId(null);
+                  setJobStatus(null);
+                  setJobLogs("");
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                disabled={jobStatus === 'compiling' || jobStatus === 'pending'}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Micro progress bar */}
+            {(jobStatus === 'compiling' || jobStatus === 'pending') && (
+              <div className="w-full bg-slate-100 rounded-full h-1 mt-4 overflow-hidden">
+                <div className="bg-indigo-600 h-full rounded-full animate-pulse"></div>
+              </div>
+            )}
+
+            {/* Monospace Log Viewer */}
+            {jobLogs && (
+              <div className="mt-4">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Compilation Logs</div>
+                <pre className="bg-slate-950 text-emerald-400 font-mono text-[9px] p-3 rounded-lg max-h-36 overflow-y-auto whitespace-pre-wrap border border-slate-800 text-left">
+                  {jobLogs}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
-export default Map;
+export default MapComponent;
