@@ -33,7 +33,7 @@ echo "=== [2/4] Initializing Elasticsearch Schema ==="
 docker compose run --rm schema ./bin/create_index
 
 echo "=== [3/4] Importing OpenStreetMap Data ==="
-docker compose run --rm openstreetmap
+docker compose run --rm openstreetmap npm start
 
 echo "=== [4/4] Starting Pelias API service ==="
 docker compose up -d api
