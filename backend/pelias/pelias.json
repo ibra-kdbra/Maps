@@ -1,0 +1,36 @@
+{
+  "esclient": {
+    "hosts": [
+      {
+        "host": "elasticsearch",
+        "port": 9200
+      }
+    ]
+  },
+  "elasticsearch": {
+    "settings": {
+      "index": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0
+      }
+    }
+  },
+  "api": {
+    "host": "0.0.0.0",
+    "port": 4000,
+    "targets": {
+      "auto_discover": false
+    }
+  },
+  "imports": {
+    "openstreetmap": {
+      "datapath": "/data",
+      "leveldbpath": "/tmp",
+      "import": [
+        {
+          "filename": "syria-merged.osm.pbf"
+        }
+      ]
+    }
+  }
+}
