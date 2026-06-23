@@ -35,7 +35,7 @@ services:
     container_name: pelias_api
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "4000:3100"
     volumes:
       - ./pelias.json:/code/pelias.json
     depends_on:
