@@ -14,8 +14,7 @@ export interface WeatherData {
 }
 
 export interface Route {
-  start: [number, number];
-  end: [number, number];
+  waypoints: [number, number][]; // Array of Lat/Lon coordinates
 }
 
 export interface MapLayer {
@@ -34,7 +33,8 @@ export interface MapState {
 }
 
 export interface MapActions {
-  setRoute: (start: [number, number], end: [number, number]) => void;
+  addWaypoint: (coord: [number, number]) => void;
+  clearWaypoints: () => void;
   setWeatherData: (data: WeatherData | null) => void;
   setZoomTo: (coords: [number, number] | null) => void;
   setInitialStart: (coords: [number, number]) => void;
