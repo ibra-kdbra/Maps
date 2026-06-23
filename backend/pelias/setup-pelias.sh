@@ -13,7 +13,7 @@ attempt=1
 ready=0
 
 while [ $attempt -le $MAX_ATTEMPTS ]; do
-  if curl -s "http://localhost:9200/_cluster/health" | grep -q -E '"status":"(green|yellow)"'; then
+  if docker exec pelias_elasticsearch curl -s "http://localhost:9200/_cluster/health" | grep -q -E '"status":"(green|yellow)"'; then
     ready=1
     break
   fi
