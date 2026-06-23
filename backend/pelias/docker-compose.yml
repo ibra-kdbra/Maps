@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: pelias/elasticsearch:7.10.2
+    container_name: pelias_elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  schema:
+    image: pelias/schema:master
+    container_name: pelias_schema
+    volumes:
+      - ./pelias.json:/code/pelias.json
+    depends_on:
+      - elasticsearch
+
+  openstreetmap:
+    image: pelias/openstreetmap:master
+    container_name: pelias_openstreetmap
+    volumes:
+      - ./pelias.json:/code/pelias.json
+      - ../data:/data
+    depends_on:
+      - elasticsearch
+
+  api:
+    image: pelias/api:master
+    container_name: pelias_api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./pelias.json:/code/pelias.json
+    depends_on:
+      - elasticsearch
+
+volumes:
+  elasticsearch_data:
