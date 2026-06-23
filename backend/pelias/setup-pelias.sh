@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")"
 
 echo "=== [1/4] Starting Elasticsearch ==="
-docker-compose up -d elasticsearch
+docker compose up -d elasticsearch
 
 echo "Waiting for Elasticsearch to be ready..."
 MAX_ATTEMPTS=60
@@ -30,12 +30,12 @@ fi
 echo "Elasticsearch is ready and healthy!"
 
 echo "=== [2/4] Initializing Elasticsearch Schema ==="
-docker-compose run --rm schema ./bin/create_index
+docker compose run --rm schema ./bin/create_index
 
 echo "=== [3/4] Importing OpenStreetMap Data ==="
-docker-compose run --rm openstreetmap
+docker compose run --rm openstreetmap
 
 echo "=== [4/4] Starting Pelias API service ==="
-docker-compose up -d api
+docker compose up -d api
 
 echo "=== Setup complete! Pelias geocoder API is running at http://localhost:4000 ==="
