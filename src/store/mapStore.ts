@@ -1,49 +1,51 @@
 import { create } from 'zustand';
 import { MapState, MapActions, MapLayer } from '../types';
 
-// Define available map layers
+// Define available map layer styles for MapLibre (Vector)
 const availableLayers: MapLayer[] = [
   {
-    id: 'openstreetmap',
-    name: 'Default',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    id: 'local-syria-minimal',
+    name: 'Syria Minimalist Engine (Offline)',
+    attribution: '&copy; Your Maps, OSM contributors',
+    url: '/data/syria-style.json'
   },
   {
-    id: 'satellite',
-    name: 'Satellite',
-    attribution: '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    id: 'voyager',
+    name: 'Day Mode (Vector)',
+    attribution: '&copy; CARTO, OpenStreetMap contributors',
+    url: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
   },
   {
-    id: 'terrain',
-    name: 'Terrain',
-    attribution: '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}'
+    id: 'positron',
+    name: 'Day Mode Light (Vector)',
+    attribution: '&copy; CARTO, OpenStreetMap contributors',
+    url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
   },
   {
-    id: 'streets',
-    name: 'Streets',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+    id: 'dark-matter',
+    name: 'Night Mode (Vector)',
+    attribution: '&copy; CARTO, OpenStreetMap contributors',
+    url: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
   }
 ];
 
 export const useMapStore = create<MapState & MapActions>((set) => ({
   route: {
-    start: [48.8566, 2.3522], // Paris
-    end: [45.7640, 4.8357], // Lyon
+    waypoints: [] // Starts empty so user can click to map
   },
   weatherData: null,
   zoomTo: null,
-  currentLayer: 'openstreetmap', // Default layer
+  currentLayer: 'local-syria-minimal', // Default layer back to stable
   availableLayers,
 
-  setRoute: (start, end) => set({ route: { start, end } }),
+  addWaypoint: (coord) => set((state) => ({ 
+    route: { waypoints: [...state.route.waypoints, coord] }
+  })),
+  clearWaypoints: () => set({ route: { waypoints: [] } }),
   setWeatherData: (data) => set({ weatherData: data }),
   setZoomTo: (coords) => set({ zoomTo: coords }),
   setInitialStart: (coords: [number, number]) => set((state) => ({
-    route: { start: coords, end: state.route.end },
+    route: { waypoints: state.route.waypoints }, // Unchanged
     zoomTo: coords, // Also zoom to current location
   })),
   setCurrentLayer: (layerId: string) => set({ currentLayer: layerId }),
