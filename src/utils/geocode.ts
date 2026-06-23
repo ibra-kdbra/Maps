@@ -11,7 +11,7 @@ export interface AutocompleteSuggestion {
  */
 export const geocodeLocation = async (location: string) => {
   try {
-    const response = await axios.get(`/geocoder/v1/search`, {
+    const response = await axios.get(`/geocoder/v1/autocomplete`, {
       params: {
         text: location,
         size: 1
