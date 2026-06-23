@@ -23,6 +23,9 @@
     }
   },
   "imports": {
+    "adminLookup": {
+      "enabled": false
+    },
     "openstreetmap": {
       "datapath": "/data",
       "leveldbpath": "/tmp",
