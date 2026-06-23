@@ -30,7 +30,7 @@ fi
 echo "Elasticsearch is ready and healthy!"
 
 echo "=== [2/4] Initializing Elasticsearch Schema ==="
-docker compose run --rm schema ./bin/create_index
+docker compose run --rm schema ./bin/create_index || true
 
 echo "=== [3/4] Importing OpenStreetMap Data ==="
 docker compose run --rm openstreetmap npm start
