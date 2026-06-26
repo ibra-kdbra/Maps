@@ -30,13 +30,20 @@ docker run --rm -v $(pwd)/data:/data \
     --force
 
 # 4. Routing Graph Generation (OSRM-car profile)
-echo "Routing Engine: Calculating custom road geometries..."
-# Extract road networks based on car profile
-docker run --rm -v $(pwd)/data:/data osrm/osrm-backend osrm-extract -p /opt/car.lua /data/syria-merged.osm.pbf
-# Partition graphs algorithms
-docker run --rm -v $(pwd)/data:/data osrm/osrm-backend osrm-partition /data/syria-merged.osrm
-# Customize weights
-docker run --rm -v $(pwd)/data:/data osrm/osrm-backend osrm-customize /data/syria-merged.osrm
+echo "Routing Engine (Car): Calculating custom road geometries..."
+docker run --rm -v $(pwd)/data:/data -v $(pwd)/profiles:/opt/profiles osrm/osrm-backend /bin/sh -c "\
+  cp /data/syria-merged.osm.pbf /data/syria-merged-car.osm.pbf && \
+  osrm-extract -p /opt/profiles/car.lua /data/syria-merged-car.osm.pbf && \
+  osrm-partition /data/syria-merged-car.osrm && \
+  osrm-customize /data/syria-merged-car.osrm"
+
+# 5. Routing Graph Generation (OSRM-motorcycle profile)
+echo "Routing Engine (Motorcycle): Calculating custom road geometries..."
+docker run --rm -v $(pwd)/data:/data -v $(pwd)/profiles:/opt/profiles osrm/osrm-backend /bin/sh -c "\
+  cp /data/syria-merged.osm.pbf /data/syria-merged-motorcycle.osm.pbf && \
+  osrm-extract -p /opt/profiles/motorcycle.lua /data/syria-merged-motorcycle.osm.pbf && \
+  osrm-partition /data/syria-merged-motorcycle.osrm && \
+  osrm-customize /data/syria-merged-motorcycle.osrm"
 
 echo "==================================="
 echo "COMPILATION SUCCESSFUL."

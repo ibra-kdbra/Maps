@@ -12,13 +12,51 @@ services:
     restart: unless-stopped
     command: [nginx-debug, '-g', 'daemon off;']
 
-  # OSRM Directions Engine
-  osrm:
+  # OSRM Directions Engine (Car)
+  osrm-car:
     image: osrm/osrm-backend
     ports:
       - "5000:5000"
     volumes:
       - ./data:/data:ro
     restart: unless-stopped
-    command: "osrm-routed --algorithm mld /data/syria-merged.osrm"
+    command: "osrm-routed --algorithm mld /data/syria-merged-car.osrm"
+
+  # OSRM Directions Engine (Motorcycle)
+  osrm-motorcycle:
+    image: osrm/osrm-backend
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data:/data:ro
+    restart: unless-stopped
+    command: "osrm-routed --algorithm mld /data/syria-merged-motorcycle.osrm"
     # Note: ensure setup-engine.sh is run before booting this container
+
+  # PostGIS Spatial Database
+  postgis:
+    image: postgis/postgis:15-3.3
+    environment:
+      - POSTGRES_USER=geofence
+      - POSTGRES_PASSWORD=geofence_pass
+      - POSTGRES_DB=geofence_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./geofencing-api/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # Geofencing API (Go Microservice)
+  geofencing-api:
+    build: ./geofencing-api
+    ports:
+      - "8082:8082"
+    environment:
+      - DB_URL=postgres://geofence:geofence_pass@postgis:5432/geofence_db?sslmode=disable
+    depends_on:
+      - postgis
+    restart: unless-stopped
+
+volumes:
+  postgis_data:

@@ -1,15 +1,68 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <osm version="0.6" generator="JOSM">
   <!-- This is where your ops team will drop overriding road data (JOSM export) -->
-  <!-- Example of a fake override highway: -->
-  <!--
-  <node id="-1" lat="33.5138" lon="36.2765" visible="true" />
-  <node id="-2" lat="33.5150" lon="36.2770" visible="true" />
-  <way id="-10" visible="true">
-    <nd ref="-1" />
-    <nd ref="-2" />
+  
+  <!-- Syria: Damascus (Barada River Bridge mock override) -->
+  <way id="-101" action="modify" visible="true">
+    <nd ref="-1" lat="33.5138" lon="36.2765" />
+    <nd ref="-2" lat="33.5150" lon="36.2770" />
     <tag k="highway" v="primary" />
-    <tag k="name" v="Secret Syrian Delivery Road" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Damascus Roadblock" />
   </way>
-  -->
+
+  <!-- Syria: Aleppo (Citadel approach mock override) -->
+  <way id="-102" action="modify" visible="true">
+    <nd ref="-3" lat="36.1993" lon="37.1624" />
+    <nd ref="-4" lat="36.1999" lon="37.1630" />
+    <tag k="highway" v="secondary" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Aleppo Roadblock" />
+  </way>
+
+  <!-- Syria: Homs (Clock Square mock override) -->
+  <way id="-103" action="modify" visible="true">
+    <nd ref="-5" lat="34.7324" lon="36.7136" />
+    <nd ref="-6" lat="34.7330" lon="36.7140" />
+    <tag k="highway" v="trunk" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Homs Roadblock" />
+  </way>
+
+  <!-- Syria: Latakia (Port Access mock override) -->
+  <way id="-104" action="modify" visible="true">
+    <nd ref="-7" lat="35.5316" lon="35.7772" />
+    <nd ref="-8" lat="35.5320" lon="35.7780" />
+    <tag k="highway" v="primary" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Latakia Roadblock" />
+  </way>
+
+  <!-- Lebanon: Beirut (Downtown/Martyrs' Square mock override) -->
+  <way id="-105" action="modify" visible="true">
+    <nd ref="-9" lat="33.8943" lon="35.5061" />
+    <nd ref="-10" lat="33.8950" lon="35.5070" />
+    <tag k="highway" v="primary" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Beirut Roadblock" />
+  </way>
+
+  <!-- Lebanon: Tripoli (Tal Square mock override) -->
+  <way id="-106" action="modify" visible="true">
+    <nd ref="-11" lat="34.4346" lon="35.8362" />
+    <nd ref="-12" lat="34.4350" lon="35.8370" />
+    <tag k="highway" v="secondary" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Tripoli Roadblock" />
+  </way>
+
+  <!-- Lebanon: Sidon (Seafront mock override) -->
+  <way id="-107" action="modify" visible="true">
+    <nd ref="-13" lat="33.5630" lon="35.3690" />
+    <nd ref="-14" lat="33.5640" lon="35.3700" />
+    <tag k="highway" v="primary" />
+    <tag k="access" v="no" />
+    <tag k="name" v="Sidon Roadblock" />
+  </way>
+
 </osm>
