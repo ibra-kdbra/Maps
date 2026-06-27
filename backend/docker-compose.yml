@@ -6,6 +6,8 @@ services:
     image: nginx:alpine
     ports:
       - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/data:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -56,6 +58,28 @@ services:
       - DB_URL=postgres://geofence:geofence_pass@postgis:5432/geofence_db?sslmode=disable
     depends_on:
       - postgis
+    restart: unless-stopped
+
+  # API Usage Tracking
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  # API Gateway & Billing
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+      - tileserver
+      - osrm-car
+      - osrm-motorcycle
+      - geofencing-api
     restart: unless-stopped
 
 volumes:

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-27T17:12:00Z",
+  "title": "Design System: Interactive Maps",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Command Blue", "canonical": "oklch(0.62 0.17 256.8)", "tonalRamp": ["#162d54", "#20437d", "#2d5da8", "#4285F4", "#70a3f7", "#9ec1fa", "#cbdcfd", "#f0f5fe"] },
+      "secondary": { "role": "accent", "displayName": "Alert Red", "canonical": "oklch(0.57 0.22 27.4)", "tonalRamp": ["#4d110b", "#7d1b12", "#b3261a", "#ea4335", "#f17970", "#f7ada8", "#fcdcd9", "#fff2f1"] },
+      "neutral-bg": { "role": "neutral", "displayName": "Canvas Gray", "canonical": "oklch(0.96 0.005 240)", "tonalRamp": ["#101011", "#212123", "#424346", "#747579", "#a7a8ab", "#d5d5d7", "#ececee", "#f5f5f5"] },
+      "neutral-surface": { "role": "neutral", "displayName": "Deck White", "canonical": "oklch(1.0 0 0)", "tonalRamp": ["#101010", "#202020", "#404040", "#707070", "#a0a0a0", "#d0d0d0", "#ededed", "#ffffff"] }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body Font", "purpose": "Default UI font for lists, tables, inputs and descriptions." }
+    },
+    "shadows": [
+      { "name": "Control Overlay", "value": "0 2px 6px rgba(0,0,0,0.3)", "purpose": "Floating controls directly over the MapLibre canvas." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Standard easing for state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Standard action button used across the dashboard.",
+      "html": "<button class=\"ds-btn-primary\">DIRECTIONS</button>",
+      "css": ".ds-btn-primary { background-color: #4285F4; color: #ffffff; padding: 8px 16px; font-family: Roboto, sans-serif; font-size: 14px; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; transition: background-color 150ms ease-in-out; } .ds-btn-primary:hover { background-color: #3367D6; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operations Deck",
+    "overview": "The design system for the Interactive Maps platform prioritizes precision, clarity, and task efficiency. As an enterprise dispatch tool, it avoids decorative gimmicks like glassmorphism or floating, low-contrast UI cards. The workspace is split between a dominant map viewport and highly dense control sidebars.",
+    "keyCharacteristics": [
+      "High contrast hierarchy for rapid scanning.",
+      "Task-focused density (inline tables, compact forms).",
+      "Restrained color application, reserving saturation for status, routes, and active user selections."
+    ],
+    "rules": [
+      { "name": "The Saturation Ceiling Rule", "body": "Saturated colors (Command Blue, Alert Red) must never cover more than 10% of any control panel surface.", "section": "colors" },
+      { "name": "The Flat Panel Rule", "body": "Docked sidebars, panels, and inner layout containers must not use shadows. They utilize solid neutral borders (#e8eaed) for layout division.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use high-contrast text ratios exceeding 4.5:1.",
+      "Do use strict border lines (#dadce0 or #e8eaed) for sidebar panel layout separation.",
+      "Do limit animations to standard transitions under 250ms that directly signal a state change."
+    ],
+    "donts": [
+      "Don't use glassmorphism, transparent backdrop-blurs, or saturated color gradients.",
+      "Don't use thick colored borders (greater than 1px) on cards or tabs to indicate accent styles.",
+      "Don't animate image objects or card layouts on idle hover states."
+    ]
+  }
+}

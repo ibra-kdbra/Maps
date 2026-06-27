@@ -231,7 +231,7 @@ const MapComponent = ({ zoomTo }: MapProps) => {
       {/* 
         Utilitarian Minimalist Side Console (Uber / Apple Maps inspired)
       */}
-      <div className="absolute top-4 left-4 z-10 w-96 bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200">
+      <div className="absolute top-4 left-4 z-10 w-96 bg-white shadow-[0_2px_6px_rgba(0,0,0,0.15)] rounded-xl overflow-hidden border border-slate-200">
         
         <div className="bg-slate-900 text-white p-4">
           <h2 className="font-semibold text-lg tracking-tight">National Logistics Map</h2>
@@ -241,13 +241,13 @@ const MapComponent = ({ zoomTo }: MapProps) => {
         {/* Tab Toggle */}
         <div className="flex border-b border-slate-200 bg-slate-50">
           <button 
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'navigation' ? 'bg-white text-slate-900 border-b-2 border-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'navigation' ? 'bg-white text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-700'}`}
             onClick={() => setActiveTab('navigation')}
           >
             Route Tester
           </button>
           <button 
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'admin' ? 'bg-white text-slate-900 border-b-2 border-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'admin' ? 'bg-white text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-700'}`}
             onClick={() => setActiveTab('admin')}
           >
             Map Admin Editor
@@ -359,7 +359,7 @@ const MapComponent = ({ zoomTo }: MapProps) => {
               <div>
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-2">Graph Logic Override</h3>
                 
-                <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-800 p-3 rounded-r text-xs leading-relaxed mb-4">
+                <div className="bg-amber-50/50 border border-amber-200 text-amber-900 p-3 rounded-md text-xs leading-relaxed mb-4">
                   <b>Purpose:</b> Uncharted alleys or blocked military checkpoints cause delivery dispatch failure. 
                   Use these tools to manually draw missing streets. The backend routing algorithms will assimilate these exported lines, allowing fleets to bridge previously inaccessible areas.
                 </div>
@@ -373,14 +373,14 @@ const MapComponent = ({ zoomTo }: MapProps) => {
                   
                   <button 
                     onClick={handleTriggerDraw}
-                    className={`w-full text-left px-3 py-2 text-sm rounded border flex items-center transition-colors ${drawMode === 'draw' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                    className={`w-full text-left px-3 py-2 text-sm rounded border flex items-center transition-colors ${drawMode === 'draw' ? 'bg-primary/10 border-primary/30 text-primary font-medium' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'}`}
                   >
                     <span className="mr-2">✏️</span> Trace Missing Road
                   </button>
 
                   <button 
                     onClick={handleTriggerSelect}
-                    className={`w-full text-left px-3 py-2 text-sm rounded border flex items-center transition-colors ${drawMode === 'select' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                    className={`w-full text-left px-3 py-2 text-sm rounded border flex items-center transition-colors ${drawMode === 'select' ? 'bg-primary/10 border-primary/30 text-primary font-medium' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'}`}
                   >
                     <span className="mr-2">👆</span> Select Geometry
                   </button>

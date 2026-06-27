@@ -1,6 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --color-primary: oklch(0.62 0.17 256.8); /* #4285F4 */
+  --color-primary-hover: oklch(0.55 0.17 256.8); /* #3367D6 */
+  --color-secondary: oklch(0.57 0.22 27.4); /* #ea4335 */
+  --color-neutral-bg: oklch(0.96 0.005 240); /* #f5f5f5 */
+  --color-neutral-surface: oklch(1.0 0 0); /* #ffffff */
+  --color-text-primary: oklch(0.20 0.01 240); /* #202124 */
+  --color-text-secondary: oklch(0.48 0.01 240); /* #5f6368 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
 * {
   box-sizing: border-box;
 }

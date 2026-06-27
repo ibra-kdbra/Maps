@@ -28,8 +28,8 @@ func main() {
 
 	http.HandleFunc("/api/v1/zone", handleZoneQuery)
 
-	log.Println("Geofencing API listening on :8082")
-	if err := http.ListenAndServe(":8082", nil); err != nil {
+	log.Println("Geofencing API listening on 0.0.0.0:8082")
+	if err := http.ListenAndServe("0.0.0.0:8082", nil); err != nil {
 		log.Fatal(err)
 	}
 }
