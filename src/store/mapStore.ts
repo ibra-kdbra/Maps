@@ -37,11 +37,13 @@ export const useMapStore = create<MapState & MapActions>((set) => ({
   zoomTo: null,
   currentLayer: 'local-syria-minimal', // Default layer back to stable
   availableLayers,
+  routingProfile: 'car', // Default to car
+  pricing: null,
 
   addWaypoint: (coord) => set((state) => ({ 
     route: { waypoints: [...state.route.waypoints, coord] }
   })),
-  clearWaypoints: () => set({ route: { waypoints: [] } }),
+  clearWaypoints: () => set({ route: { waypoints: [] }, pricing: null }), // Clear pricing when route is reset
   setWeatherData: (data) => set({ weatherData: data }),
   setZoomTo: (coords) => set({ zoomTo: coords }),
   setInitialStart: (coords: [number, number]) => set((state) => ({
@@ -49,4 +51,6 @@ export const useMapStore = create<MapState & MapActions>((set) => ({
     zoomTo: coords, // Also zoom to current location
   })),
   setCurrentLayer: (layerId: string) => set({ currentLayer: layerId }),
+  setRoutingProfile: (profile) => set({ routingProfile: profile }),
+  setPricing: (pricing) => set({ pricing }),
 }));

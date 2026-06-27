@@ -19,6 +19,21 @@ func stripPrefixProxy(prefix, target string) http.Handler {
 	return http.StripPrefix(prefix, proxy)
 }
 
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Range")
+		w.Header().Set("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -35,11 +50,11 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Map routes
-	mux.Handle("/tiles/", RateLimitMiddleware("tiles", tilesProxy))
-	mux.Handle("/route/v1/car/", RateLimitMiddleware("routing", carProxy))
-	mux.Handle("/route/v1/motorcycle/", RateLimitMiddleware("routing", motoProxy))
-	mux.Handle("/geofence/", RateLimitMiddleware("geofencing", geoProxy))
+	// Map routes wrapped with CORS
+	mux.Handle("/tiles/", CorsMiddleware(RateLimitMiddleware("tiles", tilesProxy)))
+	mux.Handle("/route/v1/car/", CorsMiddleware(RateLimitMiddleware("routing", carProxy)))
+	mux.Handle("/route/v1/motorcycle/", CorsMiddleware(RateLimitMiddleware("routing", motoProxy)) )
+	mux.Handle("/geofence/", CorsMiddleware(RateLimitMiddleware("geofencing", geoProxy)))
 
 	// Start Server
 	log.Println("API Gateway running on 0.0.0.0:8000")

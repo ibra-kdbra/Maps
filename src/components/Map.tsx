@@ -5,10 +5,16 @@ import { Protocol } from "pmtiles";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 // Fix Middle Eastern Arabic layout fragmentation completely natively
-maplibregl.setRTLTextPlugin(
-  'https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.2.3/mapbox-gl-rtl-text.min.js',
-  null as any
-);
+if (maplibregl.getRTLTextPluginStatus() === 'unavailable') {
+  try {
+    maplibregl.setRTLTextPlugin(
+      '/mapbox-gl-rtl-text.js',
+      null as any
+    );
+  } catch (e) {
+    console.warn("RTL Text Plugin already registered or failed to load:", e);
+  }
+}
 
 // Register PMTiles protocol globally
 const protocol = new Protocol();
@@ -38,6 +44,24 @@ const formatDuration = (seconds: number) => {
   const remainingMins = mins % 60;
   return `${hrs} hr ${remainingMins} min`;
 };
+const MEZZEH_ZONE_GEOJSON = {
+  "type": "Feature" as const,
+  "properties": {
+    "name": "Mezzeh Central Pricing Zone"
+  },
+  "geometry": {
+    "type": "Polygon" as const,
+    "coordinates": [
+      [
+        [36.2400, 33.5000],
+        [36.2600, 33.5000],
+        [36.2600, 33.5200],
+        [36.2400, 33.5200],
+        [36.2400, 33.5000]
+      ]
+    ]
+  }
+};
 
 const MapComponent = ({ zoomTo }: MapProps) => {
   const mapRef = useRef<MapRef>(null);
@@ -47,9 +71,50 @@ const MapComponent = ({ zoomTo }: MapProps) => {
   const waypoints = useMapStore(state => state.route.waypoints);
   const addWaypoint = useMapStore(state => state.addWaypoint);
   const clearWaypoints = useMapStore(state => state.clearWaypoints);
+  const routingProfile = useMapStore(state => state.routingProfile);
+  const setRoutingProfile = useMapStore(state => state.setRoutingProfile);
+  const pricing = useMapStore(state => state.pricing);
   
   // Custom offline routing hook
   const { routeGeoJSON, distance, duration } = useRouting(waypoints);
+
+  const [styleObject, setStyleObject] = useState<any>(null);
+
+  useEffect(() => {
+    const loadStyle = async () => {
+      try {
+        const res = await fetch('/data/syria-style.json');
+        const style = await res.json();
+        
+        // Dynamically point PMTiles URL to the high-performance API Gateway (port 8000)
+        const hostname = window.location.hostname;
+        if (style.sources && style.sources.openmaptiles) {
+          style.sources.openmaptiles.url = `pmtiles://http://${hostname}:8000/tiles/syria.pmtiles`;
+        }
+        
+        // Optimize glyphs to use cached MapLibre fonts to speed up zoom level rendering
+        style.glyphs = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        
+        setStyleObject(style);
+      } catch (err) {
+        console.error("Failed to load map style:", err);
+      }
+    };
+    loadStyle();
+  }, []);
+
+  const transformRequest = useCallback((url: string) => {
+    // Inject Authorization token for all requests to the Gateway
+    if (url.includes(':8000') || url.includes('/tiles/')) {
+      return {
+        url: url,
+        headers: {
+          'Authorization': 'Bearer zahi123'
+        }
+      };
+    }
+    return { url };
+  }, []);
 
   // Drawing state
   const [features, setFeatures] = useState<any>({});
@@ -222,8 +287,10 @@ const MapComponent = ({ zoomTo }: MapProps) => {
     drawRef.current?.trash();
   };
 
-  // Find the selected layer
-  const mapStyleUrl = availableLayers.find(layer => layer.id === currentLayer)?.url || availableLayers[0].url;
+  // Select style object or url string dynamically
+  const mapStyle = currentLayer === 'local-syria-minimal'
+    ? (styleObject || '/data/syria-style.json')
+    : (availableLayers.find(layer => layer.id === currentLayer)?.url || availableLayers[0].url);
 
   return (
     <div className="relative h-screen w-full bg-slate-100 font-sans text-slate-900">
@@ -258,16 +325,39 @@ const MapComponent = ({ zoomTo }: MapProps) => {
           {activeTab === 'navigation' && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-2">Fleet Route Simulation</h3>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">FLEET ROUTE SIMULATION</h3>
                 
-                <div className="bg-indigo-50 border border-indigo-100 p-3 rounded mb-4 text-xs text-indigo-800 leading-relaxed">
+                <div className="bg-indigo-50/60 border border-indigo-100 p-3 rounded-lg mb-4 text-xs text-indigo-900 leading-relaxed">
                   <b>Usage:</b> Click anywhere on the map to define Point A. Click again to define Point B. The underlying OSRM algorithm will instantly trace the driving path calculating distance and localized ETA.
+                </div>
+
+                {/* Routing Profile Toggle */}
+                <div className="mb-4">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Routing Profile
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 bg-slate-100/60 p-1 rounded-lg border border-slate-200/50">
+                    <button
+                      onClick={() => setRoutingProfile('car')}
+                      className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${routingProfile === 'car' ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-900'}`}
+                    >
+                      <span>🚗</span>
+                      <span>Car Profile</span>
+                    </button>
+                    <button
+                      onClick={() => setRoutingProfile('motorcycle')}
+                      className={`py-1.5 px-3 rounded-md text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${routingProfile === 'motorcycle' ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-900'}`}
+                    >
+                      <span>🏍️</span>
+                      <span>Motorcycle Profile</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Offline Autocomplete Geocoding Search */}
                 <div className="relative mb-4">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                    Location Search (Offline)
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    LOCATION SEARCH (OFFLINE)
                   </label>
                   <div className="relative">
                     <input
@@ -277,7 +367,7 @@ const MapComponent = ({ zoomTo }: MapProps) => {
                       onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                       onBlur={() => { setTimeout(() => setShowSuggestions(false), 200); }}
                       placeholder="Type place name (e.g. Damascus)..."
-                      className="w-full bg-slate-50 hover:bg-slate-100 focus:bg-white text-xs border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-lg py-2.5 pl-3 pr-8 outline-none transition-all"
+                      className="w-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white text-xs border border-slate-200 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-lg py-2.5 pl-3 pr-8 outline-none transition-all"
                     />
                     {searchQuery && (
                       <button 
@@ -305,14 +395,14 @@ const MapComponent = ({ zoomTo }: MapProps) => {
                   )}
                 </div>
                 
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="text-xs font-semibold bg-slate-100 border border-slate-200 px-2 py-1 rounded text-slate-600">
+                <div className="flex items-center space-x-2.5 mb-3">
+                  <div className="text-xs font-semibold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700">
                     Dropped Waypoints: {waypoints.length}
                   </div>
                   {waypoints.length > 0 && (
                     <button 
                       onClick={clearWaypoints}
-                      className="text-xs font-medium text-red-600 hover:text-red-800 bg-red-50 border border-red-100 px-2 py-1 rounded transition-colors"
+                      className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/50 border border-rose-200/50 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       Reset Route
                     </button>
@@ -321,29 +411,78 @@ const MapComponent = ({ zoomTo }: MapProps) => {
               </div>
 
               {distance !== null && duration !== null && (
-                <div className="pt-4 pb-2 border-y border-slate-100">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Mathematical Output</h3>
-                  <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-lg shadow-inner">
-                    <div>
-                      <div className="text-xl font-bold tracking-tighter">{formatDuration(duration)}</div>
-                      <div className="text-[10px] text-slate-400 font-medium tracking-widest mt-1">EST. TIME (ETA)</div>
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="pb-2">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Mathematical Output</h3>
+                    <div className="flex justify-between items-center bg-slate-900 text-white p-4 rounded-lg shadow-inner">
+                      <div>
+                        <div className="text-xl font-bold tracking-tighter">{formatDuration(duration)}</div>
+                        <div className="text-[10px] text-slate-400 font-medium tracking-widest mt-1">EST. TIME (ETA)</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-bold tracking-tight text-emerald-400">{formatDistance(distance)}</div>
+                        <div className="text-[10px] text-slate-400 font-medium tracking-widest mt-1">{routingProfile === 'car' ? 'DRIVING DISTANCE' : 'RIDER DISTANCE'}</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold tracking-tight text-emerald-400">{formatDistance(distance)}</div>
-                      <div className="text-[10px] text-slate-400 font-medium tracking-widest mt-1">DRIVING DISTANCE</div>
-                    </div>
+                  </div>
+
+                  {/* Enterprise Spatial Pricing Output Card */}
+                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg space-y-2">
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Enterprise Billing Calculator</h3>
+                    
+                    {pricing ? (
+                      <>
+                        <div className="flex justify-between text-xs text-slate-600">
+                          <span>Fare Zone:</span>
+                          <span className="font-semibold text-slate-900 capitalize">{pricing.zoneId.replace('-', ' ')}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-600">
+                          <span>Base Multiplier:</span>
+                          <span className="font-semibold text-slate-900">{pricing.baseFareMultiplier.toFixed(1)}x</span>
+                        </div>
+                        {pricing.surgeActive && (
+                          <div className="flex justify-between text-xs text-amber-800 bg-amber-50 border border-amber-100 px-2 py-1 rounded">
+                            <span>Surge Multiplier:</span>
+                            <span className="font-bold">{pricing.surgeMultiplier.toFixed(1)}x</span>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t border-slate-200 flex justify-between text-sm font-bold">
+                          <span>Calculated Fare:</span>
+                          <span className="text-emerald-600">
+                            ${((distance / 1000) * 1.5 * pricing.baseFareMultiplier * pricing.surgeMultiplier).toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between text-xs text-slate-600">
+                          <span>Fare Zone:</span>
+                          <span className="font-semibold text-slate-900">Standard / Default</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-600">
+                          <span>Base Multiplier:</span>
+                          <span className="font-semibold text-slate-900">1.0x</span>
+                        </div>
+                        <div className="pt-2 border-t border-slate-200 flex justify-between text-sm font-bold">
+                          <span>Calculated Fare:</span>
+                          <span className="text-emerald-600">
+                            ${((distance / 1000) * 1.5).toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
 
               <div className="pt-2">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">Basemap Graphic Engine</h3>
-                <div className="flex bg-slate-100 p-1 rounded-md">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">BASEMAP GRAPHIC ENGINE</h3>
+                <div className="flex bg-slate-100/60 p-1 rounded-lg border border-slate-200/50">
                   {availableLayers.slice(0, 2).map(layer => (
                     <button 
                       key={layer.id}
                       onClick={() => setCurrentLayer(layer.id)}
-                      className={`flex-1 text-xs py-1.5 px-2 rounded font-medium transition-all ${currentLayer === layer.id ? 'bg-white shadow-sm text-black border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                      className={`flex-1 text-xs py-2 px-3 rounded-md font-semibold transition-all ${currentLayer === layer.id ? 'bg-white shadow-sm text-slate-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-850'}`}
                     >
                       {layer.id.includes('local') ? 'Local System (Offline)' : 'Public Cloud (Online)'}
                     </button>
@@ -414,13 +553,14 @@ const MapComponent = ({ zoomTo }: MapProps) => {
       <Map
         ref={mapRef}
         mapLib={maplibregl as any}
+        transformRequest={transformRequest}
         initialViewState={{
           longitude: 38.238,
           latitude: 34.802,
           zoom: 6
         }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyleUrl}
+        mapStyle={mapStyle}
         onClick={handleMapClick}
       >
         <NavigationControl position="bottom-right" />
@@ -460,6 +600,27 @@ const MapComponent = ({ zoomTo }: MapProps) => {
             />
           </Source>
         )}
+
+        {/* Render Mezzeh Central Geofence pricing zone */}
+        <Source id="geofence-mezzeh-source" type="geojson" data={MEZZEH_ZONE_GEOJSON}>
+          <Layer
+            id="geofence-mezzeh-fill"
+            type="fill"
+            paint={{
+              "fill-color": "#f97316",
+              "fill-opacity": 0.12
+            }}
+          />
+          <Layer
+            id="geofence-mezzeh-outline"
+            type="line"
+            paint={{
+              "line-color": "#ea580c",
+              "line-width": 2,
+              "line-dasharray": [2, 2]
+            }}
+          />
+        </Source>
 
       </Map>
 

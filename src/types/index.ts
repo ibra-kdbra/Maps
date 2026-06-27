@@ -24,12 +24,21 @@ export interface MapLayer {
   url: string;
 }
 
+export interface GeofencePricing {
+  zoneId: string;
+  baseFareMultiplier: number;
+  surgeMultiplier: number;
+  surgeActive: boolean;
+}
+
 export interface MapState {
   route: Route;
   weatherData: WeatherData | null;
   zoomTo: [number, number] | null;
   currentLayer: string;
   availableLayers: MapLayer[];
+  routingProfile: 'car' | 'motorcycle';
+  pricing: GeofencePricing | null;
 }
 
 export interface MapActions {
@@ -39,4 +48,6 @@ export interface MapActions {
   setZoomTo: (coords: [number, number] | null) => void;
   setInitialStart: (coords: [number, number]) => void;
   setCurrentLayer: (layerId: string) => void;
+  setRoutingProfile: (profile: 'car' | 'motorcycle') => void;
+  setPricing: (pricing: GeofencePricing | null) => void;
 }

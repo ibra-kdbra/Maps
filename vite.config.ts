@@ -8,11 +8,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
       },
       '/geocoder': {
-        target: 'http://localhost:4000',
+        target: 'http://127.0.0.1:4000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/geocoder/, '')
       }
@@ -25,7 +26,8 @@ export default defineConfig({
       name: 'serve-pmtiles',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url === '/data/syria.pmtiles') {
+          const urlPath = req.url ? req.url.split('?')[0] : '';
+          if (urlPath === '/data/syria.pmtiles') {
             const filePath = path.resolve('backend/data/syria.pmtiles');
             const stat = fs.statSync(filePath);
             const fileSize = stat.size;
@@ -53,7 +55,7 @@ export default defineConfig({
               });
               fs.createReadStream(filePath).pipe(res);
             }
-          } else if (req.url === '/data/syria-style.json') {
+          } else if (urlPath === '/data/syria-style.json') {
             const filePath = path.resolve('backend/data/syria-style.json');
             const stat = fs.statSync(filePath);
             res.writeHead(200, {

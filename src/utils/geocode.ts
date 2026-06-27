@@ -1,5 +1,10 @@
 import axios from "axios";
 
+const getGeocoderUrl = (path: string) => {
+  const hostname = window.location.hostname;
+  return `http://${hostname}:4000${path}`;
+};
+
 export interface AutocompleteSuggestion {
   label: string;
   coordinates: [number, number]; // [lat, lon]
@@ -11,7 +16,7 @@ export interface AutocompleteSuggestion {
  */
 export const geocodeLocation = async (location: string) => {
   try {
-    const response = await axios.get(`/geocoder/v1/autocomplete`, {
+    const response = await axios.get(getGeocoderUrl(`/v1/autocomplete`), {
       params: {
         text: location,
         size: 1
@@ -39,7 +44,7 @@ export const geocodeLocation = async (location: string) => {
 export const autocompleteLocation = async (text: string): Promise<AutocompleteSuggestion[]> => {
   if (!text.trim()) return [];
   try {
-    const response = await axios.get(`/geocoder/v1/autocomplete`, {
+    const response = await axios.get(getGeocoderUrl(`/v1/autocomplete`), {
       params: {
         text,
         size: 5
@@ -67,7 +72,7 @@ export const autocompleteLocation = async (text: string): Promise<AutocompleteSu
  */
 export const reverseGeocode = async (lat: number, lon: number): Promise<string> => {
   try {
-    const response = await axios.get(`/geocoder/v1/reverse`, {
+    const response = await axios.get(getGeocoderUrl(`/v1/reverse`), {
       params: {
         "point.lat": lat,
         "point.lon": lon,
